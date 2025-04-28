@@ -1,8 +1,13 @@
 import { open, close, readFile } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const read = async () => {
     // Write your code here 
-    const file = 'files/fresh.txt';
+    const file = path.join(__dirname, 'files', 'fresh.txt');
 
     open(file, 'r', (err, fd) => {
         if (err) {

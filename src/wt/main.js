@@ -1,27 +1,45 @@
 import { Worker } from 'node:worker_threads';
 import { cpus } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const performCalculations = async () => {
     // Write your code here
-    const worker = new Worker('./worker.js');
     const numCores = cpus().length;
 
-    console.log(numCores);
-    worker.on('message', (result) => {
-        console.log(`Result of the computation: ${result}`);
-        worker.terminate();
-    });
+    const results = [];
+    const workers = [];
 
-    worker.on('error', (error) => {
-        console.error(error);
-    });
+    for (let i = 0; i < numCores; i++) {
+        const worker = new Worker(new URL('./worker.js', import.meta.url));
 
-    worker.on('exit', (code) => {
-        if (code !== 0)
-            console.error(`Worker stopped with exit code ${code}`);
-    });
+        workers.push(
+            new Promise((resolve) => {
+                worker.on('message', (result) => {
+                    resolve({ status: 'resolved', data: result });
+                });
 
-    worker.postMessage(6);
+                worker.on('error', () => {
+                    resolve({ status: 'error', data: null });
+                });
+
+                worker.on('exit', (code) => {
+                    if (code !== 0) {
+                        resolve({ status: 'error', data: null });
+                    }
+                });
+            })
+        );
+
+        worker.postMessage(10 + i);
+    }
+
+    const finalResults = await Promise.all(workers);
+
+    console.log(finalResults);
 };
 
-await performCalculations();
+await performCalculations()
